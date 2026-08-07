@@ -26,6 +26,10 @@ import {
 } from "@/components/ui/select";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
+  ClientCombobox,
+  type ClientOption,
+} from "@/components/client-combobox";
+import {
   subscriptionSchema,
   type SubscriptionFormValues,
   type SubscriptionFormInput,
@@ -51,11 +55,15 @@ export function SubscriptionFormDialog({
   subscription,
   trigger,
   plans = [],
+  clients,
 }: {
-  clientId: string;
+  // Omitted on the Subscriptions page, where the client is chosen in the form
+  // instead of being implied by the page you are on.
+  clientId?: string;
   subscription?: Subscription;
   trigger?: React.ReactNode;
   plans?: PlanOption[];
+  clients?: ClientOption[];
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -72,7 +80,7 @@ export function SubscriptionFormDialog({
   } = useForm<SubscriptionFormInput, unknown, SubscriptionFormValues>({
     resolver: zodResolver(subscriptionSchema),
     defaultValues: {
-      client_id: clientId,
+      client_id: subscription?.client_id ?? clientId ?? "",
       plan_id: subscription?.plan_id ?? "",
       name: subscription?.name ?? "",
       amount: subscription?.amount ?? 0,
@@ -138,6 +146,24 @@ export function SubscriptionFormDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <FieldGroup>
+            {clients && !clientId && (
+              <Field>
+                <FieldLabel htmlFor="client_id">Client</FieldLabel>
+                <Controller
+                  control={control}
+                  name="client_id"
+                  render={({ field }) => (
+                    <ClientCombobox
+                      clients={clients}
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+                <FieldError errors={[errors.client_id]} />
+              </Field>
+            )}
+
             {plans.length > 0 && (
               <Field>
                 <FieldLabel htmlFor="plan_id">Plan</FieldLabel>

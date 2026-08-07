@@ -106,7 +106,10 @@ export default async function ClientDetailPage({
           <DeleteConfirmButton
             title={`Delete ${client.name}?`}
             description="This also deletes all of their subscriptions, invoices, and payment history. This cannot be undone."
-            onDelete={() => deleteClientRecord(client.id)}
+            // This page is a Server Component, so an arrow function here would
+            // be a plain closure React cannot serialise across the boundary.
+            // A bound Server Action is a reference, which it can.
+            onDelete={deleteClientRecord.bind(null, client.id)}
             redirectTo="/clients"
           />
         </div>
