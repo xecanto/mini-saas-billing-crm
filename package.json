@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "node scripts/dereference-junctions.mjs",
     "start": "next start",
     "lint": "eslint"
   },
