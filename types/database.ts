@@ -9,7 +9,8 @@ export type PaymentGateway =
   | "easypaisa"
   | "card"
   | "manual"
-  | "other";
+  | "other"
+  | "safepay";
 export type ReminderChannel = "email" | "whatsapp";
 export type ReminderStatus = "pending" | "sent" | "failed";
 
@@ -35,6 +36,12 @@ export type Subscription = {
   next_due_date: string;
   status: SubscriptionStatus;
   created_at: string;
+  // Safepay auto-billing. Off by default: the daily function keeps generating
+  // invoices for the client to pay manually.
+  auto_billing: boolean;
+  safepay_plan_id: string | null;
+  safepay_subscription_id: string | null;
+  safepay_status: string | null;
 };
 
 export type Invoice = {
@@ -48,6 +55,15 @@ export type Invoice = {
   status: InvoiceStatus;
   notes: string | null;
   created_at: string;
+  safepay_tracker: string | null;
+};
+
+export type WebhookEvent = {
+  id: string;
+  source: string;
+  event_type: string | null;
+  payload: unknown;
+  processed_at: string;
 };
 
 export type Payment = {
@@ -151,6 +167,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      webhook_events: {
+        Row: WebhookEvent;
+        Insert: Partial<Omit<WebhookEvent, "id" | "processed_at">> &
+          Pick<WebhookEvent, "id">;
+        Update: Partial<Omit<WebhookEvent, "id" | "processed_at">>;
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

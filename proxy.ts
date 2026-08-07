@@ -31,7 +31,10 @@ export async function proxy(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isLoginPage = pathname === "/login";
-  const isPublicPage = pathname.startsWith("/pay/");
+  // Payment gateways call these; they authenticate with an HMAC signature over
+  // the body, not a session cookie, so a login redirect would just swallow them.
+  const isWebhook = pathname.startsWith("/api/webhooks/");
+  const isPublicPage = pathname.startsWith("/pay/") || isWebhook;
 
   if (!user && !isLoginPage && !isPublicPage) {
     const url = request.nextUrl.clone();

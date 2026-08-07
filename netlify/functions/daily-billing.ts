@@ -1,5 +1,5 @@
 import type { Config } from "@netlify/functions";
-import { addMonths, addYears, format } from "date-fns";
+import { format } from "date-fns";
 import { createAdminClient } from "../../lib/supabase/admin";
 import {
   sendNewInvoiceEmail,
@@ -8,18 +8,7 @@ import {
 } from "../../lib/email/send";
 import { formatCurrency, formatDate } from "../../lib/format";
 import { getInvoicePayUrl } from "../../lib/urls";
-import type { SubscriptionFrequency } from "../../types/database";
-
-const DATE_FORMAT = "yyyy-MM-dd";
-
-function advanceDueDate(dueDate: string, frequency: SubscriptionFrequency): string {
-  const parsed = new Date(`${dueDate}T00:00:00Z`);
-  const next =
-    frequency === "yearly"
-      ? addYears(parsed, 1)
-      : addMonths(parsed, frequency === "quarterly" ? 3 : 1);
-  return format(next, DATE_FORMAT);
-}
+import { advanceDueDate, DATE_FORMAT } from "../../lib/billing";
 
 const dailyBilling = async () => {
   const supabase = createAdminClient();
@@ -34,10 +23,15 @@ const dailyBilling = async () => {
   };
 
   // 1. Generate invoices for subscriptions hitting their next_due_date today.
+  //
+  // Subscriptions with auto_billing are charged by Safepay on its own schedule;
+  // their invoices are created already-paid from the subscription webhook.
+  // Raising a manual invoice here as well would double-bill the client.
   const { data: dueSubscriptions, error: subsError } = await supabase
     .from("subscriptions")
     .select("*, clients(id, name, email, phone)")
     .eq("status", "active")
+    .eq("auto_billing", false)
     .eq("next_due_date", today);
 
   if (subsError) results.errors.push(`subscriptions: ${subsError.message}`);

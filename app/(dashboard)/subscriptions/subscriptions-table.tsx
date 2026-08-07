@@ -13,11 +13,13 @@ import { StatusBadge } from "@/components/status-badge";
 import { DeleteConfirmButton } from "@/components/delete-confirm-button";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { Subscription } from "@/types/database";
+import { Badge } from "@/components/ui/badge";
 import { SubscriptionFormDialog } from "./subscription-form-dialog";
+import { AutoBillingButton } from "./auto-billing-button";
 import { deleteSubscriptionRecord } from "./actions";
 
 export type SubscriptionWithClient = Subscription & {
-  clients: { id: string; name: string } | null;
+  clients: { id: string; name: string; phone: string | null } | null;
 };
 
 export function SubscriptionsTable({
@@ -75,10 +77,27 @@ export function SubscriptionsTable({
                 {formatDate(sub.next_due_date)}
               </TableCell>
               <TableCell>
-                <StatusBadge status={sub.status} />
+                <div className="flex items-center gap-1.5">
+                  <StatusBadge status={sub.status} />
+                  {sub.auto_billing && (
+                    <Badge
+                      variant="outline"
+                      title="Safepay charges the saved card automatically"
+                    >
+                      Auto
+                    </Badge>
+                  )}
+                </div>
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-1">
+                  <AutoBillingButton
+                    subscriptionId={sub.id}
+                    subscriptionName={sub.name}
+                    clientName={sub.clients?.name ?? "there"}
+                    clientPhone={sub.clients?.phone ?? null}
+                    autoBilling={sub.auto_billing}
+                  />
                   <SubscriptionFormDialog
                     clientId={sub.client_id}
                     subscription={sub}

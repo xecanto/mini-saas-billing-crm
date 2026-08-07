@@ -39,6 +39,7 @@ yarn-error.log*
 
 # netlify
 .netlify
+deno.lock
 
 # local agent settings
 .claude/settings.local.json

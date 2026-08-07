@@ -33,7 +33,7 @@ export default async function ClientDetailPage({
     await Promise.all([
       supabase
         .from("subscriptions")
-        .select("*, clients(id, name)")
+        .select("*, clients(id, name, phone)")
         .eq("client_id", id)
         .order("created_at", { ascending: false }),
       supabase
