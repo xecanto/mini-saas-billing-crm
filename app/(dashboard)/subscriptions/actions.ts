@@ -2,17 +2,39 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { subscriptionSchema } from "@/lib/validations/subscription";
+import {
+  subscriptionSchema,
+  type SubscriptionFormValues,
+} from "@/lib/validations/subscription";
 import { createSafepayClient, isSafepayConfigured } from "@/lib/safepay/client";
 import { createPlan } from "@/lib/safepay/plans";
 import { getAppUrl } from "@/lib/urls";
+
+// price_overridden rides alongside the validated fields rather than inside the
+// schema: the form derives it by comparing the amount against the chosen plan,
+// so it is a computed flag, not user input to validate.
+function withPlanFields(
+  data: SubscriptionFormValues,
+  values: unknown,
+) {
+  const { plan_id, ...rest } = data;
+  return {
+    ...rest,
+    plan_id: plan_id || null,
+    price_overridden: Boolean(
+      (values as { price_overridden?: boolean })?.price_overridden,
+    ),
+  };
+}
 
 export async function createSubscriptionRecord(values: unknown) {
   const parsed = subscriptionSchema.safeParse(values);
   if (!parsed.success) return { error: "Please check the form for errors." };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("subscriptions").insert(parsed.data);
+  const { error } = await supabase
+    .from("subscriptions")
+    .insert(withPlanFields(parsed.data, values));
 
   if (error) return { error: error.message };
 
@@ -28,7 +50,7 @@ export async function updateSubscriptionRecord(id: string, values: unknown) {
   const supabase = await createClient();
   const { error } = await supabase
     .from("subscriptions")
-    .update(parsed.data)
+    .update(withPlanFields(parsed.data, values))
     .eq("id", id);
 
   if (error) return { error: error.message };

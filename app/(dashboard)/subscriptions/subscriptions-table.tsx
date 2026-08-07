@@ -14,7 +14,10 @@ import { DeleteConfirmButton } from "@/components/delete-confirm-button";
 import { formatCurrency, formatDate } from "@/lib/format";
 import type { Subscription } from "@/types/database";
 import { Badge } from "@/components/ui/badge";
-import { SubscriptionFormDialog } from "./subscription-form-dialog";
+import {
+  SubscriptionFormDialog,
+  type PlanOption,
+} from "./subscription-form-dialog";
 import { AutoBillingButton } from "./auto-billing-button";
 import { deleteSubscriptionRecord } from "./actions";
 
@@ -25,9 +28,11 @@ export type SubscriptionWithClient = Subscription & {
 export function SubscriptionsTable({
   subscriptions,
   showClient = false,
+  plans = [],
 }: {
   subscriptions: SubscriptionWithClient[];
   showClient?: boolean;
+  plans?: PlanOption[];
 }) {
   if (subscriptions.length === 0) {
     return (
@@ -101,6 +106,7 @@ export function SubscriptionsTable({
                   <SubscriptionFormDialog
                     clientId={sub.client_id}
                     subscription={sub}
+                    plans={plans}
                   />
                   <DeleteConfirmButton
                     title={`Delete ${sub.name}?`}

@@ -36,14 +36,26 @@ import {
   updateSubscriptionRecord,
 } from "./actions";
 
+export type PlanOption = {
+  id: string;
+  label: string;
+  amount: number;
+  currency: string;
+  billing_period: "monthly" | "quarterly" | "yearly";
+};
+
+const NO_PLAN = "none";
+
 export function SubscriptionFormDialog({
   clientId,
   subscription,
   trigger,
+  plans = [],
 }: {
   clientId: string;
   subscription?: Subscription;
   trigger?: React.ReactNode;
+  plans?: PlanOption[];
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -54,11 +66,14 @@ export function SubscriptionFormDialog({
     handleSubmit,
     control,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<SubscriptionFormInput, unknown, SubscriptionFormValues>({
     resolver: zodResolver(subscriptionSchema),
     defaultValues: {
       client_id: clientId,
+      plan_id: subscription?.plan_id ?? "",
       name: subscription?.name ?? "",
       amount: subscription?.amount ?? 0,
       currency: subscription?.currency ?? "PKR",
@@ -69,10 +84,18 @@ export function SubscriptionFormDialog({
     },
   });
 
+  const selectedPlanId = watch("plan_id");
+  const selectedPlan = plans.find((p) => p.id === selectedPlanId);
+  const amount = watch("amount");
+  // Flagged on save so a plan-wide price change knows to leave this row alone.
+  const isOverridden =
+    !!selectedPlan && Number(amount) !== Number(selectedPlan.amount);
+
   async function onSubmit(values: SubscriptionFormValues) {
+    const payload = { ...values, price_overridden: isOverridden };
     const result = isEdit
-      ? await updateSubscriptionRecord(subscription.id, values)
-      : await createSubscriptionRecord(values);
+      ? await updateSubscriptionRecord(subscription.id, payload)
+      : await createSubscriptionRecord(payload);
 
     if (result.error) {
       toast.error(result.error);
@@ -115,6 +138,51 @@ export function SubscriptionFormDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <FieldGroup>
+            {plans.length > 0 && (
+              <Field>
+                <FieldLabel htmlFor="plan_id">Plan</FieldLabel>
+                <Controller
+                  control={control}
+                  name="plan_id"
+                  render={({ field }) => (
+                    <Select
+                      value={field.value || NO_PLAN}
+                      onValueChange={(value) => {
+                        const next = value === NO_PLAN ? "" : value;
+                        field.onChange(next);
+                        const plan = plans.find((p) => p.id === next);
+                        if (plan) {
+                          // Prefill from the catalogue; you can still edit both.
+                          setValue("name", plan.label);
+                          setValue("amount", plan.amount);
+                          setValue("currency", plan.currency);
+                          setValue("frequency", plan.billing_period);
+                        }
+                      }}
+                    >
+                      <SelectTrigger id="plan_id" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NO_PLAN}>
+                          Custom (no plan)
+                        </SelectItem>
+                        {plans.map((plan) => (
+                          <SelectItem key={plan.id} value={plan.id}>
+                            {plan.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Linking to a plan is what lets you see who is on what, and
+                  push price changes later.
+                </p>
+              </Field>
+            )}
+
             <Field>
               <FieldLabel htmlFor="name">Package name</FieldLabel>
               <Input
@@ -134,6 +202,11 @@ export function SubscriptionFormDialog({
                   min="0"
                   {...register("amount")}
                 />
+                {isOverridden && (
+                  <p className="text-xs text-amber-600">
+                    Custom price — plan price changes will skip this client.
+                  </p>
+                )}
                 <FieldError errors={[errors.amount]} />
               </Field>
               <Field>

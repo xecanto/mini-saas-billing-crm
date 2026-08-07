@@ -19,6 +19,7 @@ import { getInvoicePayUrl } from "@/lib/urls";
 import { MarkPaidDialog } from "./mark-paid-dialog";
 import { WhatsAppReminderButton } from "./whatsapp-reminder-button";
 import { InvoiceActions } from "./invoice-actions";
+import { SendPaymentRequestButton } from "./send-payment-request-button";
 
 export default async function InvoiceDetailPage({
   params,
@@ -30,7 +31,9 @@ export default async function InvoiceDetailPage({
 
   const { data: invoice } = await supabase
     .from("invoices")
-    .select("*, clients(id, name, phone, email, company), subscriptions(name)")
+    .select(
+      "*, clients(id, name, phone, email, company), subscriptions(name), plans(name, services(name))",
+    )
     .eq("id", id)
     .single();
 
@@ -81,11 +84,20 @@ export default async function InvoiceDetailPage({
             </p>
           )}
         </div>
-        <InvoiceActions
-          invoiceId={invoice.id}
-          clientId={invoice.client_id}
-          canCancel={canCancel}
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          {canCancel && (
+            <SendPaymentRequestButton
+              invoiceId={invoice.id}
+              clientEmail={client?.email ?? null}
+              amount={formatCurrency(invoice.amount)}
+            />
+          )}
+          <InvoiceActions
+            invoiceId={invoice.id}
+            clientId={invoice.client_id}
+            canCancel={canCancel}
+          />
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">

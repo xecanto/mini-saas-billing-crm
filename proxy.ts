@@ -34,7 +34,15 @@ export async function proxy(request: NextRequest) {
   // Payment gateways call these; they authenticate with an HMAC signature over
   // the body, not a session cookie, so a login redirect would just swallow them.
   const isWebhook = pathname.startsWith("/api/webhooks/");
-  const isPublicPage = pathname.startsWith("/pay/") || isWebhook;
+  // Other websites call these with a bearer API key, again not a cookie.
+  const isPublicApi = pathname.startsWith("/api/v1/");
+  // Client-facing pages, reached by an unguessable id in an emailed link:
+  // /pay/<invoice> to pay, /manage/<subscription> to cancel.
+  const isPublicPage =
+    pathname.startsWith("/pay/") ||
+    pathname.startsWith("/manage/") ||
+    isWebhook ||
+    isPublicApi;
 
   if (!user && !isLoginPage && !isPublicPage) {
     const url = request.nextUrl.clone();

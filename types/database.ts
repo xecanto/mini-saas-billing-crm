@@ -1,5 +1,7 @@
 export type ClientStatus = "active" | "inactive";
 export type SubscriptionFrequency = "monthly" | "quarterly" | "yearly";
+export type ServiceStatus = "active" | "inactive";
+export type BillingPeriod = SubscriptionFrequency | "one_time";
 export type SubscriptionStatus = "active" | "paused" | "cancelled";
 export type InvoiceStatus = "pending" | "paid" | "overdue" | "cancelled";
 export type PaymentGateway =
@@ -13,6 +15,43 @@ export type PaymentGateway =
   | "safepay";
 export type ReminderChannel = "email" | "whatsapp";
 export type ReminderStatus = "pending" | "sent" | "failed";
+
+export type Service = {
+  id: string;
+  name: string;
+  description: string | null;
+  website_url: string | null;
+  status: ServiceStatus;
+  sort_order: number;
+  created_at: string;
+};
+
+export type Plan = {
+  id: string;
+  service_id: string;
+  name: string;
+  billing_period: BillingPeriod;
+  amount: number;
+  currency: string;
+  description: string | null;
+  features: string[];
+  status: ServiceStatus;
+  is_public: boolean;
+  sort_order: number;
+  safepay_plan_id: string | null;
+  created_at: string;
+};
+
+export type ApiKey = {
+  id: string;
+  name: string;
+  key_prefix: string;
+  key_hash: string;
+  scopes: string[];
+  last_used_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
+};
 
 export type Client = {
   id: string;
@@ -42,6 +81,11 @@ export type Subscription = {
   safepay_plan_id: string | null;
   safepay_subscription_id: string | null;
   safepay_status: string | null;
+  // Catalogue link. Null for bespoke arrangements and pre-catalogue rows.
+  plan_id: string | null;
+  // Set when this client pays something other than the plan's list price, so a
+  // plan-wide price change can skip them.
+  price_overridden: boolean;
 };
 
 export type Invoice = {
@@ -56,6 +100,8 @@ export type Invoice = {
   notes: string | null;
   created_at: string;
   safepay_tracker: string | null;
+  // Set for one-time purchases so they show up in per-plan reporting.
+  plan_id: string | null;
 };
 
 export type WebhookEvent = {
@@ -89,6 +135,35 @@ export type Reminder = {
 export type Database = {
   public: {
     Tables: {
+      services: {
+        Row: Service;
+        Insert: Partial<Omit<Service, "id" | "created_at">> &
+          Pick<Service, "name">;
+        Update: Partial<Omit<Service, "id" | "created_at">>;
+        Relationships: [];
+      };
+      plans: {
+        Row: Plan;
+        Insert: Partial<Omit<Plan, "id" | "created_at">> &
+          Pick<Plan, "service_id" | "name" | "billing_period" | "amount">;
+        Update: Partial<Omit<Plan, "id" | "created_at">>;
+        Relationships: [
+          {
+            foreignKeyName: "plans_service_id_fkey";
+            columns: ["service_id"];
+            isOneToOne: false;
+            referencedRelation: "services";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      api_keys: {
+        Row: ApiKey;
+        Insert: Partial<Omit<ApiKey, "id" | "created_at">> &
+          Pick<ApiKey, "name" | "key_prefix" | "key_hash">;
+        Update: Partial<Omit<ApiKey, "id" | "created_at">>;
+        Relationships: [];
+      };
       clients: {
         Row: Client;
         Insert: Partial<Omit<Client, "id" | "created_at">> &
@@ -110,6 +185,13 @@ export type Database = {
             columns: ["client_id"];
             isOneToOne: false;
             referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey";
+            columns: ["plan_id"];
+            isOneToOne: false;
+            referencedRelation: "plans";
             referencedColumns: ["id"];
           },
         ];
@@ -134,6 +216,13 @@ export type Database = {
             columns: ["subscription_id"];
             isOneToOne: false;
             referencedRelation: "subscriptions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "invoices_plan_id_fkey";
+            columns: ["plan_id"];
+            isOneToOne: false;
+            referencedRelation: "plans";
             referencedColumns: ["id"];
           },
         ];

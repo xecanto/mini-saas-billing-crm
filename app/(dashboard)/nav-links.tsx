@@ -5,18 +5,22 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
+  Package,
   Repeat,
   FileText,
   Wallet,
+  Plug,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clients", label: "Clients", icon: Users },
+  { href: "/services", label: "Services", icon: Package },
   { href: "/subscriptions", label: "Subscriptions", icon: Repeat },
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/payments", label: "Payments", icon: Wallet },
+  { href: "/integrations", label: "Integrations", icon: Plug },
 ];
 
 export function NavLinks({

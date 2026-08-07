@@ -12,6 +12,7 @@ import { SubscriptionFormDialog } from "../../subscriptions/subscription-form-di
 import { SubscriptionsTable } from "../../subscriptions/subscriptions-table";
 import { InvoicesTable } from "../../invoices/invoices-table";
 import { PaymentsTable } from "../../payments/payments-table";
+import { OneTimeChargeDialog } from "./one-time-charge-dialog";
 
 export default async function ClientDetailPage({
   params,
@@ -29,8 +30,12 @@ export default async function ClientDetailPage({
 
   if (!client) notFound();
 
-  const [{ data: subscriptions }, { data: invoices }, { data: payments }] =
-    await Promise.all([
+  const [
+    { data: subscriptions },
+    { data: invoices },
+    { data: payments },
+    { data: catalogue },
+  ] = await Promise.all([
       supabase
         .from("subscriptions")
         .select("*, clients(id, name, phone)")
@@ -46,7 +51,36 @@ export default async function ClientDetailPage({
         .select("*, invoices!inner(id, invoice_number, client_id, clients(id, name))")
         .eq("invoices.client_id", id)
         .order("paid_at", { ascending: false }),
+      supabase
+        .from("plans")
+        .select("id, name, amount, currency, billing_period, services(name)")
+        .eq("status", "active")
+        .order("sort_order"),
     ]);
+
+  const plans = catalogue ?? [];
+
+  const oneTimePlans = plans
+    .filter((plan) => plan.billing_period === "one_time")
+    .map((plan) => ({
+      id: plan.id,
+      label: [(plan.services as { name: string } | null)?.name, plan.name]
+        .filter(Boolean)
+        .join(" — "),
+      amount: Number(plan.amount),
+    }));
+
+  const recurringPlans = plans
+    .filter((plan) => plan.billing_period !== "one_time")
+    .map((plan) => ({
+      id: plan.id,
+      label: [(plan.services as { name: string } | null)?.name, plan.name]
+        .filter(Boolean)
+        .join(" — "),
+      amount: Number(plan.amount),
+      currency: plan.currency,
+      billing_period: plan.billing_period as "monthly" | "quarterly" | "yearly",
+    }));
 
   return (
     <div className="space-y-6">
@@ -62,7 +96,12 @@ export default async function ClientDetailPage({
               .join(" · ")}
           </p>
         </div>
-        <div className="flex gap-1">
+        <div className="flex flex-wrap items-center gap-1">
+          <OneTimeChargeDialog
+            clientId={client.id}
+            clientHasEmail={!!client.email}
+            plans={oneTimePlans}
+          />
           <ClientFormDialog client={client} />
           <DeleteConfirmButton
             title={`Delete ${client.name}?`}
@@ -121,9 +160,12 @@ export default async function ClientDetailPage({
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Subscriptions</h2>
-          <SubscriptionFormDialog clientId={client.id} />
+          <SubscriptionFormDialog clientId={client.id} plans={recurringPlans} />
         </div>
-        <SubscriptionsTable subscriptions={subscriptions ?? []} />
+        <SubscriptionsTable
+          subscriptions={subscriptions ?? []}
+          plans={recurringPlans}
+        />
       </section>
 
       <section className="space-y-3">
