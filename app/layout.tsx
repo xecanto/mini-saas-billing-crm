@@ -19,9 +19,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
+    // Browser extensions (and theme scripts) stamp attributes onto <html>
+    // before React hydrates, which React reports as a hydration mismatch.
+    // Suppressing here covers that one element only, not its children.
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
