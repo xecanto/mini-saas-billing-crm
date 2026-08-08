@@ -1,5 +1,5 @@
 import "server-only";
-import { SAFEPAY_API_URL, toMinorUnits } from "./client";
+import { SAFEPAY_API_URL, toSafepayAmount } from "./client";
 import type { SubscriptionFrequency } from "@/types/database";
 
 // The Node SDK exposes subscriptions and checkout but not plans, so plans go
@@ -67,7 +67,7 @@ export async function createPlan({
     body: JSON.stringify({
       name: safeName,
       product: safeName,
-      amount: toMinorUnits(amount),
+      amount: toSafepayAmount(amount),
       currency,
       interval,
       interval_count,
@@ -123,7 +123,7 @@ export async function updateSafepayPlanAmount({
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        amount: toMinorUnits(amount),
+        amount: toSafepayAmount(amount),
         apply_amount_change_on_existing_subscriptions:
           applyToExistingSubscriptions,
       }),

@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   createSafepayClient,
   isSafepayConfigured,
-  toMinorUnits,
+  toSafepayAmount,
 } from "@/lib/safepay/client";
 import { createPlan } from "@/lib/safepay/plans";
 import { getAppUrl } from "@/lib/urls";
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
       }
 
       const { token } = await safepay.payments.create({
-        amount: toMinorUnits(plan.amount),
+        amount: toSafepayAmount(plan.amount),
         currency: (plan.currency || "PKR") as SafepayCurrency,
       });
 

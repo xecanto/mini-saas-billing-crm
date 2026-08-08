@@ -39,13 +39,10 @@ export function createSafepayClient(): Safepay {
   });
 }
 
-// Safepay takes amounts in the currency's lowest denomination: PKR in paisa,
-// so Rs 3,000 is 300000. Our own amounts are stored in whole rupees as
-// numeric(12,2), hence the round-trip helpers.
-export function toMinorUnits(amount: number): number {
-  return Math.round(amount * 100);
-}
-
-export function fromMinorUnits(amount: number | string): number {
-  return Number(amount) / 100;
+// Despite looking like it wants the lowest denomination (PKR paisa), Safepay's
+// order/init and plans endpoints charge `amount` at face value: sending
+// toMinorUnits(10000) (i.e. 1000000) charged the card Rs 1,000,000, not
+// Rs 10,000. Verified against the sandbox on 2026-08-07. Pass whole rupees.
+export function toSafepayAmount(amount: number): number {
+  return Math.round(amount);
 }

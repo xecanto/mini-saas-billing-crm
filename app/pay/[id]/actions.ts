@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { createSafepayClient, toMinorUnits } from "@/lib/safepay/client";
+import { createSafepayClient, toSafepayAmount } from "@/lib/safepay/client";
 import { getAppUrl } from "@/lib/urls";
 import type { SafepayCurrency } from "@sfpy/node-sdk/dist/types";
 
@@ -35,7 +35,7 @@ export async function startSafepayCheckout(invoiceId: string) {
   let checkoutUrl: string;
   try {
     const { token } = await safepay.payments.create({
-      amount: toMinorUnits(invoice.amount),
+      amount: toSafepayAmount(invoice.amount),
       currency: "PKR" as SafepayCurrency,
     });
 
